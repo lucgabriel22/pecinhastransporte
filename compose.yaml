@@ -1,0 +1,64 @@
+name: logistica-nosql
+
+services:
+  mongodb:
+    image: mongo:8.0
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all", "--wiredTigerCacheSizeGB", "0.256"]
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongodb_dados:/data/db
+    mem_limit: 1g
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          mongosh --quiet --eval 'try { rs.status(); } catch (erro) {
+          if (erro.codeName === "NotYetInitialized") {
+          rs.initiate({_id:"rs0",members:[{_id:0,host:"mongodb:27017"}]});
+          } else { throw erro; } }
+          if (!db.hello().isWritablePrimary) { quit(1); }'
+      interval: 10s
+      timeout: 10s
+      retries: 18
+      start_period: 20s
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "64mb", "--maxmemory-policy", "noeviction"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_dados:/data
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  neo4j:
+    image: neo4j:5.26-community
+    environment:
+      NEO4J_AUTH: "neo4j/${NEO4J_PASSWORD:?Execute scripts/configurar.ps1 para gerar o arquivo .env}"
+      NEO4J_server_memory_heap_initial__size: 256m
+      NEO4J_server_memory_heap_max__size: 384m
+      NEO4J_server_memory_pagecache_size: 128m
+      NEO4J_dbms_memory_transaction_total_max: 64m
+    ports:
+      - "127.0.0.1:7474:7474"
+      - "127.0.0.1:7687:7687"
+    volumes:
+      - neo4j_dados:/data
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -a bolt://localhost:7687 -u neo4j -p \"$${NEO4J_AUTH#*/}\" 'RETURN 1' > /dev/null 2>&1"]
+      interval: 20s
+      timeout: 12s
+      retries: 15
+      start_period: 40s
+
+volumes:
+  mongodb_dados:
+  redis_dados:
+  neo4j_dados:

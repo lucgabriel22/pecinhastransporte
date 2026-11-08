@@ -1,7 +1,12 @@
-.env
 .venv/
-.logs/
-.estado_local/
 __pycache__/
 *.py[cod]
+.env
+.logs/
+.estado_local/
+.pytest_cache/
 entrega/
+docs/DEFESA.md
+docs/DEMONSTRACAO.md
+docs/FALA_APRESENTACAO.md
+docs/PERGUNTAS_DEFESA.md
